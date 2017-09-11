@@ -29,3 +29,10 @@ Then points the env variables to the correct files:
 export NHITE_CERT_FILE="out/127.0.0.1.crt"
 export NHITE_KEY_FILE="out/127.0.0.1.key"
 ```
+
+# FAQ
+
+## I have an error `panic: http: multiple registrations for /debug/requests` in runtime
+
+This is related to this [issue](https://github.com/grpc/grpc-go/issues/566).
+Please remove the directory `$GOPATH/src/github.com/hashicorp/terraform/vendor/golang.org/x/net/trace` and build the tool again
