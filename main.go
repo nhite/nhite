@@ -8,7 +8,7 @@ import (
 
 	"github.com/hashicorp/terraform/command"
 	"github.com/kelseyhightower/envconfig"
-	"github.com/owulveryck/cli-grpc-example/terraform-grpc/tfgrpc"
+	pb "github.com/nhite/pb-nhite"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
@@ -22,7 +22,7 @@ type configuration struct {
 	KeyFile        string `envconfig:"KEY_FILE" required:"true"`
 }
 
-const envPrefix = "tfaas"
+const envPrefix = "nhite"
 
 var config configuration
 
@@ -61,6 +61,6 @@ func main() {
 		Ui:               &grpcUI{},
 	}
 
-	tfgrpc.RegisterTerraformServer(grpcServer, &grpcCommands{meta: meta})
+	pb.RegisterTerraformServer(grpcServer, &grpcCommands{meta: meta})
 	log.Fatal(grpcServer.Serve(listener))
 }

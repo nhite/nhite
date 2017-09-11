@@ -10,14 +10,14 @@ import (
 	"golang.org/x/net/context"
 
 	"github.com/hashicorp/terraform/command"
-	"github.com/owulveryck/cli-grpc-example/terraform-grpc/tfgrpc"
+	pb "github.com/nhite/pb-nhite"
 )
 
 type grpcCommands struct {
 	meta command.Meta
 }
 
-func (g *grpcCommands) Push(stream tfgrpc.Terraform_PushServer) error {
+func (g *grpcCommands) Push(stream pb.Terraform_PushServer) error {
 	workdir, err := ioutil.TempDir("", ".terraformgrpc")
 	if err != nil {
 		return err
@@ -64,15 +64,15 @@ func (g *grpcCommands) Push(stream tfgrpc.Terraform_PushServer) error {
 	if err != nil {
 		return err
 	}
-	return stream.SendAndClose(&tfgrpc.Id{
+	return stream.SendAndClose(&pb.Id{
 		Tmpdir: workdir,
 	})
 }
 
-func (g *grpcCommands) Init(ctx context.Context, in *tfgrpc.Arg) (*tfgrpc.Output, error) {
+func (g *grpcCommands) Init(ctx context.Context, in *pb.Arg) (*pb.Output, error) {
 	err := os.Chdir(in.WorkingDir)
 	if err != nil {
-		return &tfgrpc.Output{int32(0), nil, nil}, err
+		return &pb.Output{int32(0), nil, nil}, err
 	}
 
 	tfCommand := &command.InitCommand{
@@ -86,13 +86,13 @@ func (g *grpcCommands) Init(ctx context.Context, in *tfgrpc.Arg) (*tfgrpc.Output
 	}
 	tfCommand.Meta.Ui = myUI
 	ret := int32(tfCommand.Run(in.Args))
-	return &tfgrpc.Output{ret, myUI.stdout, myUI.stderr}, err
+	return &pb.Output{ret, myUI.stdout, myUI.stderr}, err
 }
 
-func (g *grpcCommands) Apply(ctx context.Context, in *tfgrpc.Arg) (*tfgrpc.Output, error) {
+func (g *grpcCommands) Apply(ctx context.Context, in *pb.Arg) (*pb.Output, error) {
 	err := os.Chdir(in.WorkingDir)
 	if err != nil {
-		return &tfgrpc.Output{int32(0), nil, nil}, err
+		return &pb.Output{int32(0), nil, nil}, err
 	}
 
 	tfCommand := &command.ApplyCommand{
@@ -107,13 +107,13 @@ func (g *grpcCommands) Apply(ctx context.Context, in *tfgrpc.Arg) (*tfgrpc.Outpu
 	}
 	tfCommand.Meta.Ui = myUI
 	ret := int32(tfCommand.Run(in.Args))
-	return &tfgrpc.Output{ret, myUI.stdout, myUI.stderr}, err
+	return &pb.Output{ret, myUI.stdout, myUI.stderr}, err
 }
 
-func (g *grpcCommands) Plan(ctx context.Context, in *tfgrpc.Arg) (*tfgrpc.Output, error) {
+func (g *grpcCommands) Plan(ctx context.Context, in *pb.Arg) (*pb.Output, error) {
 	err := os.Chdir(in.WorkingDir)
 	if err != nil {
-		return &tfgrpc.Output{int32(0), nil, nil}, err
+		return &pb.Output{int32(0), nil, nil}, err
 	}
 
 	tfCommand := &command.PlanCommand{
@@ -127,5 +127,5 @@ func (g *grpcCommands) Plan(ctx context.Context, in *tfgrpc.Arg) (*tfgrpc.Output
 	}
 	tfCommand.Meta.Ui = myUI
 	ret := int32(tfCommand.Run(in.Args))
-	return &tfgrpc.Output{ret, myUI.stdout, myUI.stderr}, err
+	return &pb.Output{ret, myUI.stdout, myUI.stderr}, err
 }
