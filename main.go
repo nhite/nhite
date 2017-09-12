@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"log"
 	"net"
@@ -24,9 +25,25 @@ type configuration struct {
 
 const envPrefix = "nhite"
 
-var config configuration
+var (
+	config configuration
+	// Build date
+	Build string
+	// Version number
+	Version     string
+	versionFlag bool
+)
 
 func main() {
+	flag.BoolVar(&versionFlag, "v", false, "Display version then exit")
+	flag.Parse()
+	if versionFlag {
+		if Version == "" {
+			Version = "dev"
+		}
+		fmt.Printf("%v version %v, build %v\n", os.Args[0], Version, Build)
+		os.Exit(0)
+	}
 	if len(os.Args) > 1 {
 		envconfig.Usage(envPrefix, &config)
 		os.Exit(1)
