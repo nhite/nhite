@@ -21,4 +21,7 @@ $(WINDOWS64): *.go
 $(DARWIN): *.go
 	GOOS=darwin GOARCH=amd64 go build ${LDFLAGS} -o $(DARWIN) *.go
 
-
+test_certs: 
+	certstrap init --common-name nhite
+	certstrap request-cert -ip 127.0.0.1
+	certstrap sign 127.0.0.1 --CA nhite
