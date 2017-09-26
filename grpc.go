@@ -1,11 +1,12 @@
 package main
 
 import (
-	"archive/zip"
-	"bytes"
+	"crypto/sha256"
+	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
+
+	"google.golang.org/grpc"
 
 	"golang.org/x/net/context"
 
@@ -20,54 +21,38 @@ type grpcCommands struct {
 }
 
 func (g *grpcCommands) Push(stream pb.Terraform_PushServer) error {
-	workdir, err := ioutil.TempDir("", ".terraformgrpc")
-	if err != nil {
-		return err
-	}
-	err = os.Chdir(workdir)
-	if err != nil {
-		return err
-	}
-
+	var chksum [32]byte
 	body, err := stream.Recv()
 	if err == io.EOF || err == nil {
-		// We have all the file
-		// Now let's extract the zipfile
-		r, err := zip.NewReader(bytes.NewReader(body.Zipfile), int64(len(body.Zipfile)))
+		chksum = sha256.Sum256(body.Zipfile)
+		// TODO context
+		// TODO msgSize
+		pushClient, err := (*g.backend).Store(context.Background(), grpc.MaxCallRecvMsgSize(65536))
 		if err != nil {
 			return err
 		}
-		// Iterate through the files in the archive,
-		// printing some of their contents.
-		for _, f := range r.File {
-			if f.FileInfo().IsDir() {
-				err := os.MkdirAll(f.Name, 0700)
-				if err != nil {
-					return err
-				}
-				continue
-			}
-			rc, err := f.Open()
-			if err != nil {
-				return err
-			}
-			localFile, err := os.Create(f.Name)
-			if err != nil {
-				return err
-			}
-			_, err = io.Copy(localFile, rc)
-			if err != nil {
-				return err
-			}
 
-			rc.Close()
+		err = pushClient.Send(&pbBackend.Element{
+			ID: &pbBackend.ElementID{
+				ID: fmt.Sprintf("%x", chksum),
+			},
+			Body: body.Zipfile,
+		})
+		if err != nil {
+			return err
 		}
+		/*
+			err := unzip(body)
+			if err != nil {
+				return err
+			}
+		*/
 	}
 	if err != nil {
 		return err
 	}
 	return stream.SendAndClose(&pb.Id{
-		Tmpdir: workdir,
+		Sha256: fmt.Sprintf("%x", chksum),
 	})
 }
 
