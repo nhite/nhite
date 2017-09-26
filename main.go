@@ -102,8 +102,9 @@ func main() {
 	}
 
 	pb.RegisterTerraformServer(grpcServer, &grpcCommands{
-		meta:    meta,
-		backend: backend,
+		meta:       meta,
+		backend:    backend,
+		workingDir: os.TempDir(),
 	})
 	log.Fatal(grpcServer.Serve(listener))
 }

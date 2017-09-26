@@ -4,7 +4,6 @@ import (
 	"crypto/sha256"
 	"fmt"
 	"io"
-	"os"
 
 	"google.golang.org/grpc"
 
@@ -16,8 +15,9 @@ import (
 )
 
 type grpcCommands struct {
-	meta    command.Meta
-	backend *pbBackend.BackendClient
+	meta       command.Meta
+	workingDir string
+	backend    *pbBackend.BackendClient
 }
 
 func (g *grpcCommands) Push(stream pb.Terraform_PushServer) error {
@@ -41,12 +41,6 @@ func (g *grpcCommands) Push(stream pb.Terraform_PushServer) error {
 		if err != nil {
 			return err
 		}
-		/*
-			err := unzip(body)
-			if err != nil {
-				return err
-			}
-		*/
 	}
 	if err != nil {
 		return err
@@ -57,7 +51,7 @@ func (g *grpcCommands) Push(stream pb.Terraform_PushServer) error {
 }
 
 func (g *grpcCommands) Init(ctx context.Context, in *pb.Arg) (*pb.Output, error) {
-	err := os.Chdir(in.WorkingDir)
+	err := g.getLocalFiles(in.WorkingDir)
 	if err != nil {
 		return &pb.Output{int32(0), nil, nil}, err
 	}
@@ -77,7 +71,7 @@ func (g *grpcCommands) Init(ctx context.Context, in *pb.Arg) (*pb.Output, error)
 }
 
 func (g *grpcCommands) Apply(ctx context.Context, in *pb.Arg) (*pb.Output, error) {
-	err := os.Chdir(in.WorkingDir)
+	err := g.getLocalFiles(in.WorkingDir)
 	if err != nil {
 		return &pb.Output{int32(0), nil, nil}, err
 	}
@@ -98,7 +92,7 @@ func (g *grpcCommands) Apply(ctx context.Context, in *pb.Arg) (*pb.Output, error
 }
 
 func (g *grpcCommands) Plan(ctx context.Context, in *pb.Arg) (*pb.Output, error) {
-	err := os.Chdir(in.WorkingDir)
+	err := g.getLocalFiles(in.WorkingDir)
 	if err != nil {
 		return &pb.Output{int32(0), nil, nil}, err
 	}
