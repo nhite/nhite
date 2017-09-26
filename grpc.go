@@ -10,11 +10,13 @@ import (
 	"golang.org/x/net/context"
 
 	"github.com/hashicorp/terraform/command"
+	pbBackend "github.com/nhite/pb-backend"
 	pb "github.com/nhite/pb-nhite"
 )
 
 type grpcCommands struct {
-	meta command.Meta
+	meta    command.Meta
+	backend *pbBackend.BackendClient
 }
 
 func (g *grpcCommands) Push(stream pb.Terraform_PushServer) error {

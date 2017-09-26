@@ -9,6 +9,7 @@ import (
 
 	"github.com/hashicorp/terraform/command"
 	"github.com/kelseyhightower/envconfig"
+	pbBackend "github.com/nhite/pb-backend"
 	pb "github.com/nhite/pb-nhite"
 
 	"google.golang.org/grpc"
@@ -16,11 +17,12 @@ import (
 )
 
 type configuration struct {
-	ListenAddress  string `envconfig:"LISTEN_ADDRESS" required:"true" default:"127.0.0.1:1234"`
-	MaxMessageSize int    `envconfig:"MAX_RECV_MSG_SIZE" required:"true" default:"16500545"`
-	BackendAddress string `envconfig:"BACKEND_ADDRESS" required:"true"`
-	CertFile       string `envconfig:"CERT_FILE" required:"true"`
-	KeyFile        string `envconfig:"KEY_FILE" required:"true"`
+	ListenAddress   string `envconfig:"LISTEN_ADDRESS" required:"true" default:"127.0.0.1:1234"`
+	MaxMessageSize  int    `envconfig:"MAX_RECV_MSG_SIZE" required:"true" default:"16500545"`
+	BackendAddress  string `envconfig:"BACKEND_ADDRESS" required:"true"`
+	BackendCertFile string `envconfig:"BACKEND_CERT_FILE" required:"true"`
+	CertFile        string `envconfig:"CERT_FILE" required:"true"`
+	KeyFile         string `envconfig:"KEY_FILE" required:"true"`
 }
 
 const envPrefix = "nhite"
@@ -33,6 +35,21 @@ var (
 	Version     string
 	versionFlag bool
 )
+
+func initBackend(config *configuration) (*pbBackend.BackendClient, error) {
+
+	creds, err := credentials.NewClientTLSFromFile(config.BackendCertFile, "")
+	if err != nil {
+		return nil, err
+	}
+	conn, err := grpc.Dial(config.BackendAddress, grpc.WithTransportCredentials(creds))
+	if err != nil {
+		return nil, err
+	}
+	//defer conn.Close()
+	client := pbBackend.NewBackendClient(conn)
+	return &client, nil
+}
 
 func main() {
 	flag.BoolVar(&versionFlag, "v", false, "Display version then exit")
@@ -54,6 +71,12 @@ func main() {
 		envconfig.Usage(envPrefix, &config)
 		fmt.Println(err)
 		os.Exit(1)
+	}
+
+	// Try to access the backend
+	backend, err := initBackend(&config)
+	if err != nil {
+		log.Fatalf("Cannot reach backend: %v", err)
 	}
 
 	log.Println("Listening on " + config.ListenAddress)
@@ -78,6 +101,9 @@ func main() {
 		Ui:               &grpcUI{},
 	}
 
-	pb.RegisterTerraformServer(grpcServer, &grpcCommands{meta: meta})
+	pb.RegisterTerraformServer(grpcServer, &grpcCommands{
+		meta:    meta,
+		backend: backend,
+	})
 	log.Fatal(grpcServer.Serve(listener))
 }
